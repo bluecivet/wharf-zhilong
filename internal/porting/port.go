@@ -379,6 +379,10 @@ func port(pkg *packages.Package, cfg *Config) error {
 
 	// If we have have come back here after doing a run through the dependencies we should recheck the build
 	if pkg.ExtFlags == statePortingDependencies {
+		// Issue38 https://github.com/ZOSOpenTools/wharf/issues/38
+		// reload AST tree for type checking 
+		fixGlobalType()		
+
 		pkg.Build(nil, func(err packages.TypeError) {
 			if iname, ok := err.Reason.(packages.TCBadImportName); ok {
 				fname := err.Err.Fset.Position(err.Err.Pos).Filename
@@ -827,6 +831,31 @@ func typeCheck(pkg *packages.Package, filter func(packages.TypeError) bool) bool
 	}
 
 	return passed
+}
+
+func fixGlobalType() {
+	allTypes := make(map[string]*types.Package)
+	importer := packages.Importer(func(path string) (*types.Package, error) {
+		if pt, ok := allTypes[path]; ok && pt != nil {
+				return pt, nil
+		}
+
+		ipkg := packages.GetGlobalPkg(path)
+		return ipkg.Types, nil
+	})
+	handleErr := func(err packages.TypeError) {}  // empty error handler 
+
+	layers := packages.PackageImprotGraph
+	for _, layer := range layers {
+		for _, pkg := range layer.Packages {
+			pkg = packages.GetGlobalPkg(pkg.ImportPath)
+			pkg.LoadSyntax()
+			typed, _ := pkg.Build(importer, handleErr)
+			pkg.Types = typed
+			allTypes[pkg.ImportPath] = typed
+		}
+	}
+
 }
 
 // Package is an golang.org/x/... package
