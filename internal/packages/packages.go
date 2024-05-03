@@ -17,6 +17,7 @@ var PackageImportGraph []*ProcGroup
 
 var globalpkgs map[string]*Package = make(map[string]*Package, 50)
 var globalName2IName map[string]string = make(map[string]string, 10)
+var globalImportMap map[string]map[string]string = make(map[string]map[string]string, 10)
 
 func GetGlobalPkg(importName string) *Package {
 	return globalpkgs[importName]
@@ -38,6 +39,13 @@ func ClearAll() {
         ClearGlobalpkgs()
         ClearGlobalName2IName()
         PackageImportGraph = PackageImportGraph[:]
+}
+
+func GetPathFromImportMap(pkgImportPath string, depsPath string) string {
+       if importMap, ok := globalImportMap[pkgImportPath]; ok {
+               return importMap[depsPath]
+       }
+       return ""
 }
 
 type ProcGroup struct {

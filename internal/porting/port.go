@@ -834,14 +834,25 @@ func typeCheck(pkg *packages.Package, filter func(packages.TypeError) bool) bool
 
 func fixGlobalType() {
 	allTypes := make(map[string]*types.Package)
-	importer := packages.Importer(func(path string) (*types.Package, error) {
-		if pt, ok := allTypes[path]; ok && pt != nil {
+	getImporter := func(pkg *packages.Package) packages.Importer {
+		importer := packages.Importer(func(path string) (*types.Package, error) {
+			if pt, ok := allTypes[path]; ok && pt != nil {
 				return pt, nil
-		}
-
-		ipkg := packages.GetGlobalPkg(path)
-		return ipkg.Types, nil
-	})
+			}
+			ipkg := packages.GetGlobalPkg(path)
+			if ipkg == nil {
+				fmt.Println("looking in import map: ", pkg.ImportPath, " : ", packages.GetPathFromImportMap(pkg.ImportPath, path))
+				mPath := packages.GetPathFromImportMap(pkg.ImportPath, path)
+				ipkg = packages.GetGlobalPkg(mPath)
+			}
+			if ipkg == nil || ipkg.Types == nil{
+				return nil, fmt.Errorf("Can not found import package: %s", path)
+			}
+			fmt.Println("fix global importer ipkg = ", ipkg, " type = ", ipkg.Types)
+			return ipkg.Types, nil
+		})
+		return importer
+    }
 	handleErr := func(err packages.TypeError) {}  // empty error handler 
 
 	layers := packages.PackageImportGraph
@@ -849,7 +860,7 @@ func fixGlobalType() {
 		for _, pkg := range layer.Packages {
 			pkg = packages.GetGlobalPkg(pkg.ImportPath)
 			pkg.LoadSyntax()
-			typed, _ := pkg.Build(importer, handleErr)
+			typed, _ := pkg.Build(getImporter(pkg), handleErr)
 			pkg.Types = typed
 			allTypes[pkg.ImportPath] = typed
 		}
