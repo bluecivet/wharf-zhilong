@@ -390,7 +390,7 @@ func Load(paths []string, getOpts func(RawPackage, bool) (LoadOption, error)) (*
 
 		pkg.color = searched
 
-		PackageImprotGraph = layers
+		PackageImportGraph = layers
 		return level, nil
 	}
 

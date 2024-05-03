@@ -222,8 +222,7 @@ apply:
 
 
 func clearResource() {
-	packages.ClearGlobalpkgs()
-	packages.ClearGlobalName2IName()
+	packages.ClearAll()
 }
 
 // Run the build + port process on a package
@@ -845,7 +844,7 @@ func fixGlobalType() {
 	})
 	handleErr := func(err packages.TypeError) {}  // empty error handler 
 
-	layers := packages.PackageImprotGraph
+	layers := packages.PackageImportGraph
 	for _, layer := range layers {
 		for _, pkg := range layer.Packages {
 			pkg = packages.GetGlobalPkg(pkg.ImportPath)
